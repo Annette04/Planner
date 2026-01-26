@@ -4,7 +4,8 @@
     <title>Данные файла: {{ file }}</title>
 </head>
 <body>
-    <h1>Таблица из {{ file.file.name }}</h1>
+    <h1>Таблица для {{ file_type }}</h1>
+    {% if table_data %}
     <table border="1">
         <thead>
             <tr>
@@ -23,6 +24,10 @@
             {% endfor %}
         </tbody>
     </table>
-    <a href="{% url 'upload_file' %}">Загрузить другой файл</a>
+    {% else %}
+    <p>Таблица ещё не создана.</p>
+    {% endif %}
+    <a href="{% url 'upload' file_type %}">Обновить файл</a><br>
+    <a href="{% url 'home' %}">Назад</a>
 </body>
 </html>

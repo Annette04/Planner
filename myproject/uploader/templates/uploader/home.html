@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<body>
+    <h1>Загрузка файлов</h1>
+    <a href="{% url 'upload' 'plan' %}" class="btn btn-primary">Загрузить план</a>
+    <a href="{% url 'upload' 'changes' %}" class="btn btn-primary">Загрузить изменения</a>
+    <a href="{% url 'upload' 'schedule' %}" class="btn btn-primary">Загрузить график</a>
+    <a href="{% url 'upload' 'materials' %}" class="btn btn-primary">Загрузить материалы</a>
+
+    <h2>Просмотр таблиц</h2>
+    <a href="{% url 'view_table' 'plan' %}">Просмотреть план</a><br>
+    <a href="{% url 'view_table' 'changes' %}">Просмотреть изменения</a><br>
+    <a href="{% url 'view_table' 'schedule' %}">Просмотреть график</a><br>
+    <a href="{% url 'view_table' 'materials' %}">Просмотреть материалы</a>
+</body>
+</html>
