@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Загрузка файла</title>
+</head>
+<body>
+    <h1>Загрузите Excel-файл</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Загрузить</button>
+
+    </form>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Успех</title>
+</head>
+<body>
+    <h1>{{ message }}</h1>
+    {% if uploaded_file %}
+        <a href="{% url 'view_file' uploaded_file.id %}">Посмотреть данные</a>
+    {% endif %}
+    <a href="{% url 'upload_file' %}">Загрузить еще</a>
+</body>
+</html>
