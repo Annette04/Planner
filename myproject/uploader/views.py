@@ -76,14 +76,49 @@ def success(request, file_type):
 def view_table(request, file_type):
     app_label = 'uploader'
     model_name = file_type.capitalize()
+    table_name = f"uploader_{file_type}"
+
     try:
         DynamicModel = apps.get_model(app_label, model_name)
-        rows = DynamicModel.objects.all()
-        columns = [f.name for f in DynamicModel._meta.get_fields() if f.name != 'id']
-        table_data = [[getattr(row, col, None) for col in columns] for row in rows]
     except LookupError:
-        columns = []
-        table_data = []
+        # Проверяем, существует ли таблица в БД
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = %s
+                );
+            """, [table_name])
+            exists = cursor.fetchone()[0]
+
+        if exists:
+            # Получаем описание таблицы
+            with connection.cursor() as cursor:
+                description = connection.introspection.get_table_description(cursor, table_name)
+                # В Django 5+ используем .name вместо .column
+                headers = [field.name for field in description if field.name != 'id']
+
+            # Создаём динамическую модель на основе существующих полей
+            fields = {'__module__': f'{app_label}.models'}
+            for col in headers:
+                fields[col] = django_models.CharField(max_length=500, blank=True, null=True)
+
+            DynamicModel = type(model_name, (django_models.Model,), fields)
+            DynamicModel._meta.db_table = table_name
+            apps.register_model(app_label, DynamicModel)
+        else:
+            # Таблица не существует
+            return render(request, 'uploader/view_file.html', {
+                'file_type': file_type,
+                'columns': [],
+                'table_data': []
+            })
+
+    # Теперь модель существует (или только что создана)
+    rows = DynamicModel.objects.all()
+    columns = [f.name for f in DynamicModel._meta.get_fields() if f.name != 'id']
+    table_data = [[getattr(row, col, None) for col in columns] for row in rows]
 
     return render(request, 'uploader/view_file.html', {
         'file_type': file_type,
