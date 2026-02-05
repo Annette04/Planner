@@ -1,12 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Данные файла: {{ file }}</title>
+    <meta charset="UTF-8">
+    <title>Таблица: {{ file_type }}</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .filter-form { margin: 20px 0; }
+    </style>
 </head>
 <body>
-    <h1>Таблица для {{ file_type }}</h1>
-    {% if table_data %}
-    <table border="1">
+
+<h1>Таблица: {{ file_type|capfirst }}</h1>
+
+{% if file_type == 'plan' and months %}
+<div class="filter-form">
+    <form method="get">
+        <label for="month">Показать за месяц:</label>
+        <select name="month" id="month">
+            <option value="">— все —</option>
+            {% for m in months %}
+                <option value="{{ m|lower }}" {% if selected_month == m %}selected{% endif %}>
+                    {{ m }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Применить</button>
+    </form>
+</div>
+{% endif %}
+
+{% if table_data %}
+    <p>Найдено строк: {{ row_count }}</p>
+    <table>
         <thead>
             <tr>
                 {% for col in columns %}
@@ -24,10 +51,14 @@
             {% endfor %}
         </tbody>
     </table>
-    {% else %}
-    <p>Таблица ещё не создана.</p>
-    {% endif %}
-    <a href="{% url 'upload' file_type %}">Обновить файл</a><br>
-    <a href="{% url 'home' %}">Назад</a>
+{% else %}
+    <p>Нет данных{% if selected_month %} за {{ selected_month }}{% endif %}.</p>
+{% endif %}
+
+<p>
+    <a href="{% url 'upload' file_type %}">Загрузить / обновить файл</a> |
+    <a href="{% url 'home' %}">На главную</a>
+</p>
+
 </body>
 </html>
