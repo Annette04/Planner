@@ -14,19 +14,58 @@
 
 <h1>Таблица: {{ file_type|capfirst }}</h1>
 
-{% if file_type == 'plan' and months %}
-<div class="filter-form">
+{% if file_type == 'plan' %}
+<div class="filter-form" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;">
     <form method="get">
-        <label for="month">Показать за месяц:</label>
-        <select name="month" id="month">
-            <option value="">— все —</option>
-            {% for m in months %}
-                <option value="{{ m|lower }}" {% if selected_month == m %}selected{% endif %}>
-                    {{ m }}
-                </option>
-            {% endfor %}
-        </select>
-        <button type="submit">Применить</button>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;">
+
+            <!-- Месяц -->
+            <div>
+                <label for="month">Месяц:</label><br>
+                <select name="month" id="month">
+                    <option value="">— все —</option>
+                    {% for m in months %}
+                        <option value="{{ m|lower }}" {% if selected_month == m|lower %}selected{% endif %}>
+                            {{ m }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Производственный участок -->
+            <div>
+                <label for="section">Произв. участок:</label><br>
+                <select name="section" id="section">
+                    <option value="">— все —</option>
+                    {% for sec in sections %}
+                        <option value="{{ sec }}" {% if selected_section == sec %}selected{% endif %}>
+                            {{ sec }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Выбор колонок (множественный) -->
+            <div style="min-width: 280px;">
+                <label for="columns">Колонки для отображения:</label><br>
+                <select name="columns" id="columns" multiple size="6">
+                    {% for col in all_available_columns %}
+                        <option value="{{ col }}" {% if col in selected_columns %}selected{% endif %}>
+                            {{ col }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small style="display: block; color: #666; margin-top: 4px;">
+                    (выбрано: {{ selected_columns|length }} из {{ all_available_columns|length }})
+                </small>
+            </div>
+
+        </div>
+
+        <div style="margin-top: 15px;">
+            <button type="submit">Применить фильтры</button>
+            <a href="{% url 'view_table' file_type %}" style="margin-left: 15px; color: #666;">Сбросить</a>
+        </div>
     </form>
 </div>
 {% endif %}

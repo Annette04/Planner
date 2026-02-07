@@ -84,7 +84,8 @@ def view_table(request, file_type):
     try:
         DynamicModel = apps.get_model(app_label, model_name)
     except LookupError:
-        # Проверяем, существует ли таблица
+        # ... (ваш существующий код создания временной модели, если таблицы нет)
+        # предполагаем, что он уже есть и работает
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT EXISTS (
@@ -95,96 +96,112 @@ def view_table(request, file_type):
             """, [table_name])
             exists = cursor.fetchone()[0]
 
-        if exists:
-            # Получаем реальные поля таблицы
-            with connection.cursor() as cursor:
-                description = connection.introspection.get_table_description(cursor, table_name)
-                headers = [field.name for field in description if field.name != 'id']
-
-            # Создаём временную модель
-            fields = {'__module__': f'{app_label}.models'}
-            for col in headers:
-                fields[col] = django_models.CharField(max_length=500, blank=True, null=True)
-
-            DynamicModel = type(model_name, (django_models.Model,), fields)
-            DynamicModel._meta.db_table = table_name
-            apps.register_model(app_label, DynamicModel)
-        else:
+        if not exists:
             return render(request, 'uploader/view_file.html', {
                 'file_type': file_type,
                 'columns': [],
                 'table_data': [],
                 'months': None,
-                'selected_month': ''
+                'selected_month': '',
+                'sections': [],
+                'selected_section': '',
+                'all_available_columns': [],
+                'selected_columns': [],
+                'row_count': 0,
             })
 
-    # Получаем все строки
-    rows = DynamicModel.objects.all()
+        # Получаем реальные колонки из БД
+        with connection.cursor() as cursor:
+            description = connection.introspection.get_table_description(cursor, table_name)
+            all_fields = [field.name for field in description if field.name != 'id']
+
+        # Создаём временную модель
+        fields = {'__module__': f'{app_label}.models'}
+        for col in all_fields:
+            fields[col] = django_models.CharField(max_length=500, blank=True, null=True)
+        DynamicModel = type(model_name, (django_models.Model,), fields)
+        DynamicModel._meta.db_table = table_name
+        apps.register_model(app_label, DynamicModel)
+
+    # Все доступные поля
+    all_available_columns = [
+        f.name for f in DynamicModel._meta.get_fields()
+        if f.name != 'id' and not f.name.startswith('_')
+    ]
+    all_available_columns.sort()  # для удобства
 
     # ──────────────────────────────────────────────
-    # Фильтрация по месяцу (только для plan)
+    # GET-параметры
     # ──────────────────────────────────────────────
+    selected_month_str = request.GET.get('month', '').strip().lower()
+    selected_section = request.GET.get('section', '').strip()
+    default_cols = ['Заказ', 'ЗапланНачало', 'ПроизвУчасток']
+
+    # Колонки — список из GET (может быть несколько значений)
+    selected_columns_input = request.GET.getlist('columns')
+    if selected_columns_input:
+        selected_columns = default_cols + [c for c in selected_columns_input if c in all_available_columns]
+    else:
+        # По умолчанию — три основные, если существуют
+        selected_columns = [c for c in default_cols if c in all_available_columns]
+
+    # Если после фильтрации ничего не выбрано — берём все
+    if not selected_columns:
+        selected_columns = all_available_columns[:]
+
+    # ──────────────────────────────────────────────
+    # Фильтрация
+    # ──────────────────────────────────────────────
+    queryset = DynamicModel.objects.all()
+
+    # Фильтр по участку
+    if selected_section and 'ПроизвУчасток' in all_available_columns:
+        queryset = queryset.filter(ПроизвУчасток=selected_section)
+
+    # Фильтр по месяцу
     selected_month = None
-    filtered_rows = list(rows)
-
-    if file_type.lower() == 'plan':
-        selected_month_str = request.GET.get('month', '').strip().lower()
+    if file_type.lower() == 'plan' and selected_month_str:
         month_map = {
             'январь': 1, 'февраль': 2, 'март': 3, 'апрель': 4, 'май': 5, 'июнь': 6,
             'июль': 7, 'август': 8, 'сентябрь': 9, 'октябрь': 10, 'ноябрь': 11, 'декабрь': 12
         }
         month_num = month_map.get(selected_month_str)
-
         if month_num:
             selected_month = selected_month_str.capitalize()
-            filtered_rows = []
 
-            for row in rows:
-                has_match = False
-                for date_field in ['БазисСрокНачала', 'БазисСрокКонца']:
-                    date_str = getattr(row, date_field, None)
-                    if date_str and isinstance(date_str, str):
-                        try:
-                            # Пробуем разные форматы
-                            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d.%m.%Y', '%d.%m.%Y %H:%M']:
-                                try:
-                                    dt = datetime.strptime(date_str.strip(), fmt)
-                                    if dt.month == month_num:
-                                        has_match = True
-                                        break
-                                except ValueError:
-                                    continue
-                            if has_match:
-                                break
-                        except:
-                            pass
-                if has_match:
-                    filtered_rows.append(row)
-
-    # ──────────────────────────────────────────────
-    # Выбор отображаемых колонок
-    # ──────────────────────────────────────────────
-    if file_type.lower() == 'plan':
-        desired = ['Заказ', 'БазисСрокНачала', 'БазисСрокКонца']
-        all_fields = [f.name for f in DynamicModel._meta.get_fields() if f.name != 'id']
-        columns = [col for col in desired if col in all_fields]
-    else:
-        columns = [f.name for f in DynamicModel._meta.get_fields() if f.name != 'id']
+    rows = list(queryset)  # или queryset.values(*selected_columns) для оптимизации
 
     # Подготовка данных для шаблона
     table_data = [
-        [getattr(row, col, None) for col in columns]
-        for row in filtered_rows
+        [getattr(row, col, None) for col in selected_columns]
+        for row in rows
     ]
+
+    # Уникальные участки
+    sections = []
+    if 'ПроизвУчасток' in all_available_columns:
+        sections = list(
+            DynamicModel.objects
+            .values_list('ПроизвУчасток', flat=True)
+            .distinct()
+            .exclude(ПроизвУчасток__isnull=True)
+            .order_by('ПроизвУчасток')
+        )
 
     months_list = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 
-    return render(request, 'uploader/view_file.html', {
+    context = {
         'file_type': file_type,
-        'columns': columns,
+        'columns': selected_columns,
+        'all_available_columns': all_available_columns,
+        'selected_columns': selected_columns,
         'table_data': table_data,
         'months': months_list if file_type.lower() == 'plan' else None,
         'selected_month': selected_month,
+        'sections': sections,
+        'selected_section': selected_section,
         'row_count': len(table_data),
-    })
+    }
+
+    return render(request, 'uploader/view_file.html', context)
