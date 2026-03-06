@@ -199,7 +199,7 @@ def view_table(request, file_type):
     filtered_table_name = 'uploader_filtered_plan'
     saved_message = None
 
-    has_filters = selected_month or selected_section
+    has_filters = bool(selected_month_str or selected_section)
     if has_filters and selected_columns:
         with connection.cursor() as cursor:
             # 1. Создаём новую таблицу с нужными колонками
@@ -259,6 +259,7 @@ def view_table(request, file_type):
         'selected_section': selected_section,
         'row_count': len(table_data),
         'saved_message': saved_message,
+        'selected_month_lower': selected_month_str,
     }
 
     return render(request, 'uploader/view_file.html', context)

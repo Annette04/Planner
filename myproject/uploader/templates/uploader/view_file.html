@@ -27,7 +27,7 @@
                 <select name="month" id="month">
                     <option value="">— все —</option>
                     {% for m in months %}
-                        <option value="{{ m|lower }}" {% if selected_month == m|lower %}selected{% endif %}>
+                        <option value="{{ m|lower }}" {% if selected_month_lower == m|lower %}selected{% endif %}>
                             {{ m }}
                         </option>
                     {% endfor %}
@@ -58,9 +58,9 @@
                         </label>
                     {% endfor %}
                 </div>
-                <small style="display: block; color: #666; margin-top: 4px;">
-                    (выбрано: {{ selected_columns|length }} из {{ all_available_columns|length }})
-                </small>
+                <!--<small style="display: block; color: #666; margin-top: 4px;">
+                    (выбрано: {{ selected_columns|length}} из {{ columns_for_view|length }})
+                </small>-->
             </div>
 
         </div>
