@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <body>
     <h1>Загрузка файлов</h1>
-    <a href="{% url 'upload' 'plan' %}" class="btn btn-primary">Загрузить план</a>
-    <a href="{% url 'upload' 'changes' %}" class="btn btn-primary">Загрузить изменения</a>
-    <a href="{% url 'upload' 'schedule' %}" class="btn btn-primary">Загрузить график</a>
-    <a href="{% url 'upload' 'materials' %}" class="btn btn-primary">Загрузить материалы</a>
+    <a href="{% url 'upload' 'plan' %}">Загрузить план</a><br>
+    <a href="{% url 'upload' 'changes' %}">Загрузить изменения</a><br>
+    <a href="{% url 'upload' 'schedule' %}">Загрузить график</a><br>
+    <a href="{% url 'upload' 'materials' %}">Загрузить материалы на складе</a><br>
+    <a href="{% url 'upload' 'materials_in_order' %}">Загрузить материалы в заказах</a><br>
 
     <h2>Просмотр таблиц</h2>
     <a href="{% url 'view_table' 'plan' %}">Просмотреть план</a><br>
     <a href="{% url 'view_table' 'changes' %}">Просмотреть изменения</a><br>
     <a href="{% url 'view_table' 'schedule' %}">Просмотреть график</a><br>
-    <a href="{% url 'view_table' 'materials' %}">Просмотреть материалы</a>
+    <a href="{% url 'view_table' 'materials' %}">Просмотреть материалы на складе</a><br>
+    <a href="{% url 'view_table' 'materials_in_order' %}">Просмотреть материалы в заказах</a><br>
 </body>
 </html>
