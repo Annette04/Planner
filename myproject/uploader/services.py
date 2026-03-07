@@ -91,3 +91,23 @@ def save_filtered_plan_table(selected_columns, selected_section, month_condition
             insert_params.extend(month_params)
 
         cursor.execute(insert_query, insert_params)
+
+
+def get_materials_by_order(order_number: str):
+    """Возвращает все материалы для конкретного заказа"""
+    try:
+        MaterialsModel = get_dynamic_model('materials_in_order')
+
+        # Ищем по полю "Заказ" (точное совпадение)
+        materials = MaterialsModel.objects.filter(Заказ=order_number)
+
+        result = []
+        for item in materials:
+            row = {}
+            for field in MaterialsModel._meta.get_fields():
+                if field.name != 'id':
+                    row[field.name] = getattr(item, field.name, None)
+            result.append(row)
+        return result
+    except Exception:
+        return []  # если таблицы ещё нет или ошибка

@@ -1,11 +1,17 @@
+# uploader/views.py
+import pandas as pd
 from django.db import connection, models as django_models
 from django.apps import apps
-import pandas as pd
-from django.db import connection
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from .forms import UploadForm
 from .models import UploadedFile
-from .services import get_dynamic_model, build_month_filter, save_filtered_plan_table
+from .services import (
+    get_dynamic_model,
+    build_month_filter,
+    save_filtered_plan_table,
+    get_materials_by_order
+)
 
 
 def home(request):
@@ -26,7 +32,7 @@ def upload(request, file_type):
 
 
 def process_excel_to_db(uploaded_file, file_type):
-    #Создаёт таблицу при первой загрузке + обновляет при изменении заголовков
+    """Создаёт таблицу при первой загрузке + обновляет при изменении заголовков"""
     file_path = uploaded_file.file.path
     df = pd.read_excel(file_path)
     headers = df.columns.tolist()
@@ -64,7 +70,7 @@ def process_excel_to_db(uploaded_file, file_type):
         DynamicModel._meta.db_table = table_name
         apps.register_model(app_label, DynamicModel)
 
-    # Заполняем данными
+    # Заполняем данными с корректной обработкой чисел
     for _, row in df.iterrows():
         data = {}
         for col in headers:
@@ -72,7 +78,7 @@ def process_excel_to_db(uploaded_file, file_type):
             if pd.isna(val):
                 data[col] = None
             elif isinstance(val, (int, float)):
-                # Если число целое — сохраняем как int, иначе как float → str
+                # Убираем .0 у целых чисел
                 if val == int(val):
                     data[col] = str(int(val))
                 else:
@@ -100,11 +106,9 @@ def view_table(request, file_type):
         if f.name != 'id' and not f.name.startswith('_')
     ])
 
-    # Логика отображения и фильтров — разная для 'plan'
     is_plan = file_type.lower() == 'plan'
 
     if is_plan:
-        # Только для plan: дефолтные колонки + чекбоксы остальных
         default_cols = ['Заказ', 'ЗапланНачало', 'ПроизвУчасток']
         columns_for_view = [col for col in all_available_columns if col not in default_cols]
 
@@ -116,7 +120,7 @@ def view_table(request, file_type):
         if not selected_columns:
             selected_columns = default_cols if default_cols else all_available_columns
 
-        # Фильтрация только для plan
+        # Фильтрация
         queryset = DynamicModel.objects.all()
         if selected_section and 'ПроизвУчасток' in all_available_columns:
             queryset = queryset.filter(ПроизвУчасток=selected_section)
@@ -140,23 +144,24 @@ def view_table(request, file_type):
         else:
             rows = list(queryset)
 
-        # Сохранение отфильтрованной таблицы — только для plan
         saved_message = None
         if (selected_month_str or selected_section) and selected_columns:
-            save_filtered_plan_table(selected_columns, selected_section, month_condition, month_params, source_table_name)
-            saved_message = f'Таблица uploader_filtered_plan обновлена ({len(table_data)} строк)'
+            save_filtered_plan_table(selected_columns, selected_section, month_condition, month_params,
+                                     source_table_name)
+            saved_message = f'Таблица uploader_filtered_plan обновлена ({len(rows)} строк)'
     else:
-        # Для всех остальных типов — показываем все колонки без фильтров
+        # Для всех остальных типов — все колонки, без фильтров
         selected_columns = all_available_columns
         selected_month_str = ''
         selected_section = ''
-        selected_month_lower = ''
         rows = list(DynamicModel.objects.all())
         saved_message = None
-        columns_for_view = []  # не показываем чекбоксы
+        columns_for_view = []
 
-    # Общее для всех
-    table_data = [[getattr(row, col, None) for col in selected_columns] for row in rows]
+    table_data = []
+    for row in rows:
+        row_dict = {col: getattr(row, col, None) for col in selected_columns}
+        table_data.append(row_dict)
 
     sections = []
     if is_plan and 'ПроизвУчасток' in all_available_columns:
@@ -185,3 +190,17 @@ def view_table(request, file_type):
     }
 
     return render(request, 'uploader/view_file.html', context)
+
+
+def get_materials_for_order(request, order_number):
+    """AJAX-эндпоинт: материалы по номеру заказа"""
+    materials = get_materials_by_order(order_number)
+
+    columns = list(materials[0].keys()) if materials else []
+
+    return JsonResponse({
+        'order_number': order_number,
+        'columns': columns,
+        'materials': materials,
+        'count': len(materials)
+    })
