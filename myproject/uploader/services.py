@@ -100,12 +100,12 @@ def get_materials_by_order(order_number: str):
 
         # Ищем по полю "Заказ" (точное совпадение)
         materials = MaterialsModel.objects.filter(Заказ=order_number)
-
+        fields_name = ["Материал", "Краткий текст материала", "ПланКоличество"]
         result = []
         for item in materials:
             row = {}
             for field in MaterialsModel._meta.get_fields():
-                if field.name != 'id':
+                if field.name != 'id' and field.name in fields_name:
                     row[field.name] = getattr(item, field.name, None)
             result.append(row)
         return result

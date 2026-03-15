@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <body>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'uploader/css/view_table.css' %}">
     <h1>Загрузка файлов</h1>
     <a href="{% url 'upload' 'plan' %}">Загрузить план</a><br>
     <a href="{% url 'upload' 'changes' %}">Загрузить изменения</a><br>

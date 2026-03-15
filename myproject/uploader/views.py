@@ -136,7 +136,7 @@ def view_table(request, file_type):
                     query += ' AND "ПроизвУчасток" = %s'
                     params.append(selected_section)
                 if month_condition:
-                    query += month_condition
+                    query += ' ' + month_condition
                     params.extend(month_params)
                 cursor.execute(query, params)
                 rows = [DynamicModel(**dict(zip([f.name for f in DynamicModel._meta.get_fields()], row)))

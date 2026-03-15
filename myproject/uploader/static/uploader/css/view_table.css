@@ -1,0 +1,116 @@
+/* static/uploader/css/view_table.css */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+h1 {
+    color: #2c3e50;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #ecf0f1;
+    font-weight: bold;
+    color: #34495e;
+}
+
+.filter-form {
+    margin: 20px 0;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #dfe6e9;
+    border-radius: 8px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+
+.filter-form label {
+    font-weight: 500;
+    margin-right: 10px;
+}
+
+.checkbox-group {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #bdc3c7;
+    padding: 12px;
+    border-radius: 6px;
+    background: #f8f9fa;
+}
+
+.checkbox-group label {
+    display: block;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.65);
+    overflow: auto;
+}
+
+.modal-content {
+    background: white;
+    margin: 6% auto;
+    padding: 25px;
+    width: 90%;
+    max-width: 1200px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.close {
+    float: right;
+    font-size: 36px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #7f8c8d;
+}
+
+.close:hover {
+    color: #c0392b;
+}
+
+.modal h2 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.modal th {
+    background: #3498db;
+    color: white;
+}
+
+a {
+    color: #2980b9;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

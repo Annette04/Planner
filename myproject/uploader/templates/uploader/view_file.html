@@ -2,20 +2,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Таблица: {{ file_type }}</title>
-    <style>
-        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .filter-form { margin: 20px 0; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; }
-        .checkbox-group { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
-        .checkbox-group label { display: block; margin-bottom: 5px; }
+    <title>Таблица: {{ file_type|capfirst }}</title>
 
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
-        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 1100px; border-radius: 8px; max-height: 85vh; overflow-y: auto; }
-        .close { float: right; font-size: 28px; cursor: pointer; }
-        .modal th { background: #e3f2fd; }
-    </style>
+    <!-- Подключаем стили -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'uploader/css/view_table.css' %}">
 </head>
 <body>
 
@@ -25,7 +16,6 @@
 <div class="filter-form">
     <form method="get">
         <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
-
             <!-- Месяц -->
             <div>
                 <label for="month">Месяц:</label><br>
@@ -54,7 +44,7 @@
 
             <!-- Выбор колонок (чекбоксы) -->
             <div style="min-width: 280px;">
-                <label>Колонки для отображения:</label><br>
+                <label>Дополнительные колонки:</label><br>
                 <div class="checkbox-group">
                     {% for col in columns_for_view %}
                         <label>
@@ -63,19 +53,19 @@
                         </label>
                     {% endfor %}
                 </div>
-                <!--<small style="display: block; color: #666; margin-top: 4px;">
-                    (выбрано: {{ selected_columns|length}} из {{ columns_for_view|length }})
-                </small>-->
             </div>
-
         </div>
 
-        <div style="margin-top: 15px;">
+        <div style="margin-top: 20px;">
             <button type="submit">Применить фильтры</button>
-            <a href="{% url 'view_table' file_type %}" style="margin-left: 15px; color: #666;">Сбросить</a>
+            <a href="{% url 'view_table' file_type %}" style="margin-left: 20px; color: #7f8c8d;">Сбросить</a>
         </div>
     </form>
 </div>
+{% endif %}
+
+{% if saved_message %}
+    <p style="color: #27ae60; font-weight: bold; margin: 15px 0;">{{ saved_message }}</p>
 {% endif %}
 
 {% if table_data %}
@@ -84,13 +74,7 @@
         <thead>
             <tr>
                 {% for col in columns %}
-                    <th>
-                        {% if file_type == 'plan' and col == 'Заказ' %}
-                            {{ col }} <small>(кликни для материалов)</small>
-                        {% else %}
-                            {{ col }}
-                        {% endif %}
-                    </th>
+                    <th>{{ col }}</th>
                 {% endfor %}
             </tr>
         </thead>
@@ -100,7 +84,7 @@
                     {% for col, cell in row.items %}
                         {% if col == 'Заказ' and file_type == 'plan' %}
                             <td>
-                                <a href="#" onclick="showMaterials('{{ cell|escapejs }}'); return false;" style="color:blue; text-decoration:underline;">
+                                <a href="#" onclick="showMaterials('{{ cell|escapejs }}'); return false;">
                                     {{ cell|default:"—" }}
                                 </a>
                             </td>
@@ -116,16 +100,13 @@
     <p>Нет данных{% if selected_month %} за {{ selected_month }}{% endif %}.</p>
 {% endif %}
 
-<!-- ==================== МОДАЛЬНОЕ ОКНО ==================== -->
+<!-- Модальное окно -->
 <div id="materialsModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">×</span>
         <h2>Материалы для заказа: <span id="modalOrderNumber"></span></h2>
         <p id="modalCount"></p>
-
-        <div id="modalTableContainer">
-            <!-- таблица заполняется через JS -->
-        </div>
+        <div id="modalTableContainer"></div>
     </div>
 </div>
 
@@ -134,45 +115,8 @@
     <a href="{% url 'home' %}">На главную</a>
 </p>
 
-<script>
-function showMaterials(orderNumber) {
-    fetch(`/materials/${orderNumber}/`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('modalOrderNumber').textContent = data.order_number;
-            document.getElementById('modalCount').innerHTML = `Найдено материалов: <b>${data.count}</b>`;
-
-            let html = '<table style="width:100%"><thead><tr>';
-            data.columns.forEach(col => {
-                html += `<th>${col}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-
-            data.materials.forEach(row => {
-                html += '<tr>';
-                data.columns.forEach(col => {
-                    html += `<td>${row[col] || '—'}</td>`;
-                });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-
-            document.getElementById('modalTableContainer').innerHTML = html;
-            document.getElementById('materialsModal').style.display = 'block';
-        })
-        .catch(err => alert('Ошибка при загрузке материалов'));
-}
-
-function closeModal() {
-    document.getElementById('materialsModal').style.display = 'none';
-}
-
-// Закрытие по клику вне окна
-window.onclick = function(event) {
-    const modal = document.getElementById('materialsModal');
-    if (event.target === modal) closeModal();
-}
-</script>
+<!-- Подключаем JavaScript -->
+<script src="{% static 'uploader/js/view_table.js' %}"></script>
 
 </body>
 </html>
