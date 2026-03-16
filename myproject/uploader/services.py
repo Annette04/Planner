@@ -1,5 +1,6 @@
 from django.db import connection, models as django_models
 from django.apps import apps
+from django.db.models import Sum
 
 
 def get_dynamic_model(file_type: str):
@@ -94,20 +95,56 @@ def save_filtered_plan_table(selected_columns, selected_section, month_condition
 
 
 def get_materials_by_order(order_number: str):
-    """Возвращает все материалы для конкретного заказа"""
+    """Возвращает материалы по заказу + проверка остатка на складе (без Sum в базе)"""
     try:
-        MaterialsModel = get_dynamic_model('materials_in_order')
+        OrderModel = get_dynamic_model('materials_in_order')
+        StockModel = get_dynamic_model('materials')
 
-        # Ищем по полю "Заказ" (точное совпадение)
-        materials = MaterialsModel.objects.filter(Заказ=order_number)
-        fields_name = ["Материал", "Краткий текст материала", "ПланКоличество"]
+        # Получаем все материалы для этого заказа
+        materials = OrderModel.objects.filter(Заказ=order_number)
+
+        print(f"DEBUG: Заказ '{order_number}', найдено строк в materials_in_order: {materials.count()}")
+
         result = []
         for item in materials:
-            row = {}
-            for field in MaterialsModel._meta.get_fields():
-                if field.name != 'id' and field.name in fields_name:
-                    row[field.name] = getattr(item, field.name, None)
+            material_code = getattr(item, 'Материал', None)
+            if not material_code:
+                continue
+
+            plan_qty_str = getattr(item, 'ПланКоличество', '0')
+            try:
+                plan_qty = float(str(plan_qty_str).replace(',', '.').strip())
+            except:
+                plan_qty = 0.0
+
+            # Суммируем в Python (работает даже если Количество — строка)
+            stock_total = 0.0
+            stock_items = StockModel.objects.filter(**{"Номенклатурный номер": material_code})
+            print(f"DEBUG: Материал '{material_code}', найдено записей на складе: {stock_items.count()}")
+
+            for stock in stock_items:
+                qty_str = getattr(stock, 'Количество', '0')
+                try:
+                    qty = float(str(qty_str).replace(',', '.').strip())
+                    stock_total += qty
+                except:
+                    pass  # пропускаем некорректные значения
+
+            available = stock_total
+            shortage = max(0, plan_qty - available)
+
+            row = {
+                'Материал': material_code,
+                'Краткий текст материала': getattr(item, 'Краткий текст материала', None),
+                'ПланКоличество': plan_qty,
+                'Доступно на складе': available,
+                'Недостаток': shortage,
+            }
             result.append(row)
+
+        print(f"DEBUG: Для заказа {order_number} подготовлено строк для модального окна: {len(result)}")
         return result
-    except Exception:
-        return []  # если таблицы ещё нет или ошибка
+
+    except Exception as e:
+        print(f"Ошибка в get_materials_by_order: {type(e).__name__}: {str(e)}")
+        return []

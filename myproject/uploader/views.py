@@ -77,14 +77,18 @@ def process_excel_to_db(uploaded_file, file_type):
             val = row[col]
             if pd.isna(val):
                 data[col] = None
+            elif col == 'Количество':  # ← обрабатываем только это поле
+                try:
+                    # Убираем пробелы, запятые → превращаем в float
+                    cleaned = str(val).replace(' ', '').replace(',', '.')
+                    data[col] = float(cleaned)
+                except (ValueError, TypeError):
+                    data[col] = None  # если не число — сохраняем None
             elif isinstance(val, (int, float)):
-                # Убираем .0 у целых чисел
-                if val == int(val):
-                    data[col] = str(int(val))
-                else:
-                    data[col] = str(val)
+                data[col] = float(val)  # все числа как float
             else:
                 data[col] = str(val)
+
         DynamicModel.objects.create(**data)
 
 
@@ -136,7 +140,7 @@ def view_table(request, file_type):
                     query += ' AND "ПроизвУчасток" = %s'
                     params.append(selected_section)
                 if month_condition:
-                    query += ' ' + month_condition
+                    query += ' '+month_condition
                     params.extend(month_params)
                 cursor.execute(query, params)
                 rows = [DynamicModel(**dict(zip([f.name for f in DynamicModel._meta.get_fields()], row)))
