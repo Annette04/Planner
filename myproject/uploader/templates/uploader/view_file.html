@@ -59,6 +59,7 @@
         <div style="margin-top: 20px;">
             <button type="submit">Применить фильтры</button>
             <a href="{% url 'view_table' file_type %}" style="margin-left: 20px; color: #7f8c8d;">Сбросить</a>
+            <a href="{% url 'download_table' file_type %}">Скачать в Excel</a>
         </div>
     </form>
 </div>

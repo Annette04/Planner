@@ -215,3 +215,78 @@ def get_materials_for_order(request, order_number):
         'materials': materials,
         'count': len(materials)
     })
+
+from openpyxl import Workbook
+from datetime import datetime
+from django.http import HttpResponse
+
+def download_table_excel(request, file_type):
+    """Скачивание таблицы в Excel. Приоритет — отфильтрованная таблица для plan"""
+    try:
+        if file_type.lower() == 'plan':
+            table_name = 'uploader_filtered_plan'
+        else:
+            table_name = f"uploader_{file_type}"
+
+        # Проверяем, существует ли таблица
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = %s
+                );
+            """, [table_name])
+            exists = cursor.fetchone()[0]
+
+        # Если filtered_plan не существует — берём оригинальную таблицу plan
+        if not exists and file_type.lower() == 'plan':
+            table_name = 'uploader_plan'
+
+        # Получаем данные
+        if table_name == 'uploader_filtered_plan':
+            # Для filtered_plan создаём временную модель
+            with connection.cursor() as cursor:
+                description = connection.introspection.get_table_description(cursor, table_name)
+                columns = [field.name for field in description if field.name != 'id']
+
+            fields = {'__module__': 'uploader.models'}
+            for col in columns:
+                fields[col] = django_models.CharField(max_length=500, blank=True, null=True)
+
+            DynamicModel = type('FilteredPlan', (django_models.Model,), fields)
+            DynamicModel._meta.db_table = table_name
+            apps.register_model('uploader', DynamicModel)
+        else:
+            DynamicModel = get_dynamic_model(file_type)
+
+        rows = DynamicModel.objects.all()
+
+        # Создаём Excel файл
+        wb = Workbook()
+        ws = wb.active
+        ws.title = file_type.upper()
+
+        # Заголовки
+        columns = [f.name for f in DynamicModel._meta.get_fields() if f.name != 'id']
+        for col_num, column_title in enumerate(columns, 1):
+            ws.cell(row=1, column=col_num, value=column_title)
+
+        # Заполняем данные
+        for row_num, obj in enumerate(rows, 2):
+            for col_num, col in enumerate(columns, 1):
+                value = getattr(obj, col, '')
+                ws.cell(row=row_num, column=col_num, value=value)
+
+        # Ответ для скачивания
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"{file_type}_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+
+    except Exception as e:
+        print(f"Ошибка скачивания Excel: {e}")
+        return HttpResponse(f"Ошибка при формировании файла: {str(e)}", status=500)
