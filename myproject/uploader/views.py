@@ -10,7 +10,7 @@ from .services import (
     get_dynamic_model,
     build_month_filter,
     save_filtered_plan_table,
-    get_materials_by_order
+    get_materials_by_order, get_order_status
 )
 
 
@@ -165,6 +165,13 @@ def view_table(request, file_type):
     table_data = []
     for row in rows:
         row_dict = {col: getattr(row, col, None) for col in selected_columns}
+
+        # Добавляем статус заказа
+        status = 'no_materials'
+        if 'Заказ' in row_dict and row_dict['Заказ']:
+            status = get_order_status(str(row_dict['Заказ']).strip())
+
+        row_dict['status'] = status  # ← обычное поле, без подчёркивания
         table_data.append(row_dict)
 
     sections = []

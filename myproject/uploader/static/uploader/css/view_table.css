@@ -117,3 +117,8 @@ a:hover {
 
 .status-green { background-color: #e8f5e9 !important; }
 .status-red   { background-color: #ffebee !important; color: #c62828; }
+/* Подсветка строк заказов */
+.status-full    { background-color: #98fb98 !important; } /* зелёный — хватает */
+.status-partial { background-color: #ffff99 !important; } /* жёлтый — частично */
+.status-none    { background-color: #ffebee !important; } /* красный — совсем нет */
+.status-no-materials { background-color: #afeeee !important; } /* синий — нет позиций */

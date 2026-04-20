@@ -148,3 +148,48 @@ def get_materials_by_order(order_number: str):
     except Exception as e:
         print(f"Ошибка в get_materials_by_order: {type(e).__name__}: {str(e)}")
         return []
+
+def get_order_status(order_number: str):
+    """Возвращает статус заказа: full / partial / none / no_materials"""
+    try:
+        OrderModel = get_dynamic_model('materials_in_order')
+        StockModel = get_dynamic_model('materials')
+
+        materials = OrderModel.objects.filter(Заказ=order_number)
+        if not materials.exists():
+            return 'no_materials'
+
+        has_full = True
+        has_partial = False
+
+        for item in materials:
+            material_code = getattr(item, 'Материал', None)
+            if not material_code:
+                continue
+
+            plan_qty = float(getattr(item, 'ПланКоличество', 0) or 0)
+
+            # Суммируем остаток на складе
+            stock_total = 0.0
+            for stock in StockModel.objects.filter(**{"Номенклатурный номер": material_code}):
+                qty_str = getattr(stock, 'Количество', '0')
+                try:
+                    qty = float(str(qty_str).replace(',', '.').strip())
+                    stock_total += qty
+                except:
+                    pass
+
+            if stock_total < plan_qty:
+                has_full = False
+                has_partial = True
+
+        if has_full:
+            return 'full'      # зелёный
+        elif has_partial:
+            return 'partial'   # жёлтый
+        else:
+            return 'none'      # красный
+
+    except Exception as e:
+        print(f"Ошибка get_order_status: {e}")
+        return 'none'

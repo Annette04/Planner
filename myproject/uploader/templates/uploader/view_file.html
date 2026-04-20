@@ -64,9 +64,6 @@
 </div>
 {% endif %}
 
-{% if saved_message %}
-    <p style="color: #27ae60; font-weight: bold; margin: 15px 0;">{{ saved_message }}</p>
-{% endif %}
 
 {% if table_data %}
     <p>Найдено строк: {{ row_count }}</p>
@@ -80,16 +77,22 @@
         </thead>
         <tbody>
             {% for row in table_data %}
-                <tr>
+                <tr class="{% if row.status == 'full' %}status-full
+                           {% elif row.status == 'partial' %}status-partial
+                           {% elif row.status == 'none' %}status-none
+                           {% else %}status-no-materials{% endif %}">
+
                     {% for col, cell in row.items %}
-                        {% if col == 'Заказ' and file_type == 'plan' %}
-                            <td>
-                                <a href="#" onclick="showMaterials('{{ cell|escapejs }}'); return false;">
-                                    {{ cell|default:"—" }}
-                                </a>
-                            </td>
-                        {% else %}
-                            <td>{{ cell|default:"—" }}</td>
+                        {% if col != 'status' %}   <!-- скрываем служебное поле -->
+                            {% if col == 'Заказ' and file_type == 'plan' %}
+                                <td>
+                                    <a href="#" onclick="showMaterials('{{ cell|escapejs }}'); return false;">
+                                        {{ cell|default:"—" }}
+                                    </a>
+                                </td>
+                            {% else %}
+                                <td>{{ cell|default:"—" }}</td>
+                            {% endif %}
                         {% endif %}
                     {% endfor %}
                 </tr>
